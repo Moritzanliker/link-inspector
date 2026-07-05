@@ -5,6 +5,7 @@ go 1.26.2
 require (
 	github.com/eluv-io/errors-go v1.0.5
 	github.com/eluv-io/log-go v1.0.10
+	golang.org/x/net v0.56.0
 )
 
 require (
@@ -14,5 +15,6 @@ require (
 	github.com/modern-go/gls v0.0.0-20220109145502-612d0167dce5 // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	golang.org/x/text v0.38.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 )

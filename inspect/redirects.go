@@ -23,6 +23,13 @@ const (
 	userAgent = "link-inspector/1.0 (+https://github.com/moritzanliker/link-inspector)"
 )
 
+// Reasons carried in the "reason" error field. The inspector matches on
+// these to turn follower failures into findings instead of API errors.
+const (
+	reasonRedirectLoop     = "redirect loop"
+	reasonTooManyRedirects = "too many redirects"
+)
+
 // Hop is one step in a redirect chain, in the shape the API returns.
 type Hop struct {
 	URL    string `json:"url"`
@@ -71,7 +78,7 @@ func (f *Follower) Follow(ctx context.Context, rawURL string) ([]Hop, error) {
 	for len(chain) < maxHops {
 		target := u.String()
 		if visited[target] {
-			return chain, e("reason", "redirect loop", "loop_url", target)
+			return chain, e("reason", reasonRedirectLoop, "loop_url", target)
 		}
 		visited[target] = true
 
@@ -97,7 +104,7 @@ func (f *Follower) Follow(ctx context.Context, rawURL string) ([]Hop, error) {
 		}
 		u = next
 	}
-	return chain, e("reason", "too many redirects", "max_hops", maxHops)
+	return chain, e("reason", reasonTooManyRedirects, "max_hops", maxHops)
 }
 
 // fetch performs a single request. HEAD is tried first so no body is
