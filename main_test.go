@@ -21,7 +21,8 @@ func TestDocRoutes(t *testing.T) {
 		contentType string
 		mustContain string
 	}{
-		{"/doc", "text/html; charset=utf-8", "/openapi.yaml"},
+		{"/doc", "text/html; charset=utf-8", "/doc/scalar.js"},
+		{"/doc/scalar.js", "text/javascript; charset=utf-8", "createApiReference"},
 		{"/openapi.yaml", "application/yaml", "LinkCheck API"},
 	}
 	for _, tt := range tests {

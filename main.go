@@ -27,6 +27,12 @@ const inspectTimeout = 60 * time.Second
 //go:embed openapi.yaml
 var openapiSpec []byte
 
+// scalarJS is the vendored Scalar API-reference viewer (version pinned in
+// assets/scalar.version), embedded so /doc needs no CDN or internet access.
+//
+//go:embed assets/scalar.standalone.min.js
+var scalarJS []byte
+
 // docHTML renders the OpenAPI spec with Scalar's API reference viewer.
 const docHTML = `<!doctype html>
 <html lang="en">
@@ -37,7 +43,7 @@ const docHTML = `<!doctype html>
   </head>
   <body>
     <div id="app"></div>
-    <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+    <script src="/doc/scalar.js"></script>
     <script>
       Scalar.createApiReference("#app", { url: "/openapi.yaml" });
     </script>
@@ -45,9 +51,17 @@ const docHTML = `<!doctype html>
 </html>
 `
 
+// Rate limit per client IP: generous for a human clicking around, tight
+// enough that the service is useless as a bulk URL scanner.
+const (
+	rateLimit  = 20
+	rateWindow = time.Minute
+)
+
 func newMux(ins *inspect.Inspector) *http.ServeMux {
+	limiter := newRateLimiter(rateLimit, rateWindow)
 	mux := http.NewServeMux()
-	mux.Handle("POST /api/inspect", handleInspect(ins))
+	mux.Handle("POST /api/inspect", limiter.middleware(handleInspect(ins)))
 	mux.HandleFunc("GET /openapi.yaml", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/yaml")
 		_, _ = w.Write(openapiSpec)
@@ -55,6 +69,12 @@ func newMux(ins *inspect.Inspector) *http.ServeMux {
 	mux.HandleFunc("GET /doc", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_, _ = w.Write([]byte(docHTML))
+	})
+	mux.HandleFunc("GET /doc/scalar.js", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
+		// The bundle only changes when we re-vendor it; let browsers cache.
+		w.Header().Set("Cache-Control", "public, max-age=86400")
+		_, _ = w.Write(scalarJS)
 	})
 	mux.Handle("GET /", frontendHandler("web/dist"))
 	return mux

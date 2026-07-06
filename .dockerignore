@@ -1,0 +1,9 @@
+.git
+.idea
+web/node_modules
+web/dist
+Dockerfile
+README.md
+CLAUDE.md
+PLAN.md
+*.test
