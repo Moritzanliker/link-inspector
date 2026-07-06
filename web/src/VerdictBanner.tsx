@@ -2,16 +2,17 @@ import type { Verdict } from "./api";
 
 const COPY: Record<Verdict, { label: string; detail: string }> = {
   ok: {
-    label: "Looks OK",
-    detail: "No obvious tricks found. Still, only continue if you expected this link.",
+    label: "Sieht ok aus",
+    detail:
+      "Keine offensichtlichen Tricks gefunden. Fahren Sie trotzdem nur fort, wenn Sie diesen Link erwartet haben.",
   },
   caution: {
-    label: "Caution",
-    detail: "Some things about this link deserve a second look before you continue.",
+    label: "Vorsicht",
+    detail: "Einige Merkmale dieses Links verdienen einen zweiten Blick, bevor Sie fortfahren.",
   },
   suspicious: {
-    label: "Suspicious",
-    detail: "This link shows patterns typical of phishing. Do not enter any data there.",
+    label: "Verdächtig",
+    detail: "Dieser Link zeigt typische Phishing-Muster. Geben Sie dort keine Daten ein.",
   },
 };
 

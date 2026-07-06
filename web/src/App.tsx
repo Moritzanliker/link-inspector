@@ -11,6 +11,7 @@ type State =
   | { status: "error"; message: string };
 
 const EXAMPLES = [
+  "https://www.admin.ch/aktuelles",
   "https://bit.ly/3vTFLhW",
   "http://paypal.com.account-check.example",
 ];
@@ -32,7 +33,7 @@ export default function App() {
       setState({
         status: "error",
         message:
-          err instanceof ApiError ? err.message : "Something went wrong while inspecting",
+          err instanceof ApiError ? err.message : "Bei der Prüfung ist etwas schiefgelaufen",
       });
     }
   }
@@ -45,15 +46,24 @@ export default function App() {
   return (
     <div className="page">
       <header className="masthead">
+        <div className="brand">
+          <div className="brand-mark" aria-hidden="true">L</div>
+          <span className="brand-name">LinkCheck</span>
+        </div>
         <h1>
-          Link<span className="masthead-dash">—</span>Inspector
+          Wohin führt dieser Link
+          <br />
+          <span className="accent">wirklich?</span>
         </h1>
-        <p className="tagline">See where a link really leads before you click it.</p>
+        <p className="tagline">
+          Wir folgen jeder Weiterleitung serverseitig und zeigen Ihnen das echte Ziel —
+          samt typischer Phishing-Muster. Bevor Sie klicken.
+        </p>
       </header>
 
       <form className="inspect-form" onSubmit={onSubmit}>
         <label className="visually-hidden" htmlFor="url">
-          Link to inspect
+          Zu prüfender Link
         </label>
         <input
           id="url"
@@ -61,18 +71,18 @@ export default function App() {
           inputMode="url"
           autoFocus
           spellCheck={false}
-          placeholder="Paste a link, e.g. https://bit.ly/…"
+          placeholder="Link einfügen, z. B. https://bit.ly/…"
           value={input}
           onChange={(e) => setInput(e.target.value)}
         />
         <button type="submit" disabled={state.status === "loading" || input.trim() === ""}>
-          {state.status === "loading" ? "Inspecting…" : "Inspect"}
+          {state.status === "loading" ? "Prüfe…" : "Prüfen"}
         </button>
       </form>
 
       {state.status === "idle" && (
         <p className="examples">
-          Try:{" "}
+          Beispiele:{" "}
           {EXAMPLES.map((ex) => (
             <button key={ex} type="button" className="example-chip" onClick={() => void inspect(ex)}>
               {ex}
@@ -85,13 +95,13 @@ export default function App() {
         {state.status === "loading" && (
           <div className="scanning" role="status">
             <div className="scanning-bar" />
-            <p>Following the redirect trail…</p>
+            <p>Wir folgen der Weiterleitungsspur…</p>
           </div>
         )}
 
         {state.status === "error" && (
           <div className="error-card" role="alert">
-            <h2>Could not inspect that link</h2>
+            <h2>Dieser Link konnte nicht geprüft werden</h2>
             <p>{state.message}</p>
           </div>
         )}
@@ -107,8 +117,8 @@ export default function App() {
 
       <footer className="colophon">
         <p>
-          Checks run server-side; nothing is stored. Redirects are followed with strict
-          safety limits — internal addresses are never contacted.
+          Prüfungen laufen serverseitig; nichts wird gespeichert. Weiterleitungen werden
+          mit strikten Sicherheitslimits verfolgt — interne Adressen werden nie kontaktiert.
         </p>
       </footer>
     </div>

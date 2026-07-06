@@ -1,23 +1,23 @@
 import type { Finding, Severity } from "./api";
 
 const GROUPS: { severity: Severity; title: string }[] = [
-  { severity: "danger", title: "Danger signs" },
-  { severity: "warn", title: "Worth checking" },
-  { severity: "info", title: "Notes" },
+  { severity: "danger", title: "Gefahrenzeichen" },
+  { severity: "warn", title: "Prüfenswert" },
+  { severity: "info", title: "Hinweise" },
 ];
 
 export default function Findings({ findings }: { findings: Finding[] }) {
   if (findings.length === 0) {
     return (
       <section className="findings">
-        <h2>Findings</h2>
-        <p className="findings-none">Nothing suspicious detected by any check.</p>
+        <h2>Befunde</h2>
+        <p className="findings-none">Keine der Prüfungen hat etwas Verdächtiges gefunden.</p>
       </section>
     );
   }
   return (
     <section className="findings">
-      <h2>Findings</h2>
+      <h2>Befunde</h2>
       {GROUPS.map(({ severity, title }) => {
         const group = findings.filter((f) => f.severity === severity);
         if (group.length === 0) return null;

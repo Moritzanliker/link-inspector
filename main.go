@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/eluv-io/errors-go"
@@ -25,6 +26,7 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.Handle("POST /api/inspect", handleInspect(ins))
+	mux.Handle("GET /", frontendHandler("web/dist"))
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -94,6 +96,27 @@ func messageFor(err error) string {
 		return reason
 	}
 	return "inspection failed"
+}
+
+// frontendHandler serves the built frontend from dir. It is a single-page
+// app, so any path that is not an existing file gets index.html. When the
+// frontend has not been built, the API keeps working and / explains itself.
+func frontendHandler(dir string) http.Handler {
+	if _, err := os.Stat(filepath.Join(dir, "index.html")); err != nil {
+		log.Warn("frontend not built, serving placeholder", "dir", dir)
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.Error(w, "Link-Inspector API. Frontend not built — run `npm run build` in web/.", http.StatusNotFound)
+		})
+	}
+	files := http.FileServer(http.Dir(dir))
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path := filepath.Join(dir, filepath.Clean("/"+r.URL.Path))
+		if info, err := os.Stat(path); err != nil || info.IsDir() {
+			http.ServeFile(w, r, filepath.Join(dir, "index.html"))
+			return
+		}
+		files.ServeHTTP(w, r)
+	})
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {

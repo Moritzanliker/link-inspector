@@ -10,9 +10,9 @@ export default function RedirectChain({ chain, finalURL }: { chain: Hop[]; final
   if (chain.length === 0) {
     return (
       <section className="chain">
-        <h2>Redirect trail</h2>
+        <h2>Weiterleitungsspur</h2>
         <p className="chain-empty">
-          The link was not followed — see the findings below for why.
+          Dem Link wurde nicht gefolgt — die Befunde unten erklären, warum.
         </p>
       </section>
     );
@@ -20,9 +20,9 @@ export default function RedirectChain({ chain, finalURL }: { chain: Hop[]; final
   return (
     <section className="chain">
       <h2>
-        Redirect trail
+        Weiterleitungsspur
         <span className="chain-count">
-          {chain.length === 1 ? "no redirects" : `${chain.length} stops`}
+          {chain.length === 1 ? "keine Weiterleitungen" : `${chain.length} Stationen`}
         </span>
       </h2>
       <ol>
@@ -30,10 +30,10 @@ export default function RedirectChain({ chain, finalURL }: { chain: Hop[]; final
           <li key={`${i}-${hop.url}`} className="hop" style={{ animationDelay: `${i * 90}ms` }}>
             <span className={`hop-status ${statusClass(hop.status)}`}>{hop.status}</span>
             <span
-              className={hop.https ? "hop-lock hop-lock-on" : "hop-lock hop-lock-off"}
-              title={hop.https ? "Encrypted (https)" : "Not encrypted (http)"}
+              className={hop.https ? "hop-lock" : "hop-lock hop-lock-off"}
+              title={hop.https ? "Verschlüsselt (https)" : "Unverschlüsselt (http)"}
             >
-              {hop.https ? "🔒" : "⚠"}
+              {hop.https ? "https" : "http"}
             </span>
             <span className="hop-url">{hop.url}</span>
           </li>
@@ -41,7 +41,7 @@ export default function RedirectChain({ chain, finalURL }: { chain: Hop[]; final
       </ol>
       {finalURL && (
         <p className="chain-final">
-          Ends at <strong className="hop-url">{finalURL}</strong>
+          Endet bei <strong className="hop-url">{finalURL}</strong>
         </p>
       )}
     </section>
