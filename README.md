@@ -164,10 +164,6 @@ a deliberately constrained setup:
   and dropped the prototype's mocked "domain age" finding because WHOIS
   is explicitly out of scope.
 
-The interesting part wasn't code generation speed but that the guardrails
-(spec, milestones, non-negotiable security requirements, human commits) made
-the output reviewable — the same rules that make human collaboration work.
-
 ## License
 
 [MIT](LICENSE)
