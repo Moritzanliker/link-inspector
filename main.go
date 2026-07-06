@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
 	"net/http"
 	"os"
@@ -21,12 +22,47 @@ var log = elog.Get("/link-inspector")
 // inspectTimeout caps a whole inspection: 10 hops x 5s per hop, plus slack.
 const inspectTimeout = 60 * time.Second
 
-func main() {
-	ins := inspect.NewInspector(inspect.NewFollower(inspect.NewGuard()))
+// openapiSpec is compiled into the binary so /doc works wherever it runs.
+//
+//go:embed openapi.yaml
+var openapiSpec []byte
 
+// docHTML renders the OpenAPI spec with Scalar's API reference viewer.
+const docHTML = `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LinkCheck API Reference</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+    <script>
+      Scalar.createApiReference("#app", { url: "/openapi.yaml" });
+    </script>
+  </body>
+</html>
+`
+
+func newMux(ins *inspect.Inspector) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.Handle("POST /api/inspect", handleInspect(ins))
+	mux.HandleFunc("GET /openapi.yaml", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/yaml")
+		_, _ = w.Write(openapiSpec)
+	})
+	mux.HandleFunc("GET /doc", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write([]byte(docHTML))
+	})
 	mux.Handle("GET /", frontendHandler("web/dist"))
+	return mux
+}
+
+func main() {
+	ins := inspect.NewInspector(inspect.NewFollower(inspect.NewGuard()))
+	mux := newMux(ins)
 
 	port := os.Getenv("PORT")
 	if port == "" {

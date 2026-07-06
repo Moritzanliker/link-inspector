@@ -1,0 +1,243 @@
+openapi: 3.0.3
+info:
+  title: LinkCheck API
+  version: 1.0.0
+  description: |
+    LinkCheck reveals where a URL really leads: it follows the redirect
+    chain server-side (behind a strict SSRF guard), runs a set of
+    plain-language checks against every hop, and returns findings plus a
+    simple verdict.
+
+    ### How inspection works
+    1. The redirect chain is followed manually — max 10 hops, 5 s per hop,
+       HEAD requests first, response bodies never buffered.
+    2. Before **every** hop the hostname is resolved and validated: private,
+       loopback, link-local and cloud-metadata addresses are never contacted
+       (DNS-rebinding safe — the dialed IP is re-validated at connect time).
+    3. Each URL in the chain runs through homoglyph and heuristic checks;
+       every triggered check becomes a finding.
+    4. The verdict is the maximum finding severity — no scores, no weighting.
+
+    Outcomes that are themselves results of the inspection (blocked internal
+    address, redirect loop, hop limit) come back as `200` with a danger
+    finding, **not** as HTTP errors. Errors are reserved for cases where
+    there is nothing to show (invalid input, unresolvable host, timeout).
+servers:
+  - url: /
+# The API is public by design: no authentication, no accounts.
+security: []
+tags:
+  - name: inspection
+    description: URL inspection
+
+paths:
+  /api/inspect:
+    post:
+      tags: [inspection]
+      operationId: inspectURL
+      summary: Inspect a URL
+      description: |
+        Follows the URL's redirect chain and returns every hop, all findings,
+        and an aggregate verdict. Request bodies are limited to 4 KB; the
+        whole inspection is capped at 60 s.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InspectRequest"
+            examples:
+              shortener:
+                summary: A shortened link
+                value: { url: "https://tinyurl.com/2fcpre6" }
+              internal:
+                summary: An internal address (blocked by the SSRF guard)
+                value: { url: "http://169.254.169.254/" }
+      responses:
+        "200":
+          description: |
+            Inspection completed. Note that "completed" includes chains that
+            were stopped on purpose (blocked internal address, redirect loop,
+            more than 10 hops) — those produce a `danger` finding and usually
+            a `suspicious` verdict, with `redirect_chain` holding the hops
+            followed up to that point and `final_url` empty if the first hop
+            was already refused.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Result"
+              examples:
+                chain:
+                  summary: Followed chain with a warning
+                  value:
+                    input_url: "http://google.com/"
+                    final_url: "http://www.google.com/"
+                    redirect_chain:
+                      - { url: "http://google.com/", status: 301, https: false }
+                      - { url: "http://www.google.com/", status: 200, https: false }
+                    findings:
+                      - severity: warn
+                        code: INSECURE_HTTP
+                        message: "Part of the link's path uses unencrypted HTTP — data sent there can be read or altered in transit"
+                    verdict: caution
+                blocked:
+                  summary: Internal address refused
+                  value:
+                    input_url: "http://169.254.169.254/"
+                    final_url: ""
+                    redirect_chain: []
+                    findings:
+                      - severity: danger
+                        code: BLOCKED_INTERNAL
+                        message: "The link leads to an internal or private network address; it was not followed"
+                      - severity: warn
+                        code: RAW_IP
+                        message: "The URL points to the raw IP address 169.254.169.254 instead of a named website"
+                      - severity: warn
+                        code: INSECURE_HTTP
+                        message: "Part of the link's path uses unencrypted HTTP — data sent there can be read or altered in transit"
+                    verdict: suspicious
+        "400":
+          description: >
+            Invalid request: malformed JSON, missing `url`, an unparsable
+            URL, or a scheme other than http/https.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "unsupported scheme, only http and https are allowed"
+        "502":
+          description: The host cannot be resolved or is unreachable.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "host cannot be resolved"
+        "504":
+          description: The host did not respond within the per-hop timeout.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "host did not respond in time"
+        "500":
+          description: Unexpected internal error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "inspection failed"
+
+components:
+  schemas:
+    InspectRequest:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+          description: The URL to inspect. Only http and https are allowed.
+          example: "https://bit.ly/abc"
+
+    Result:
+      type: object
+      description: The full inspection report.
+      required: [input_url, final_url, redirect_chain, findings, verdict]
+      properties:
+        input_url:
+          type: string
+          description: The URL exactly as submitted.
+        final_url:
+          type: string
+          description: >
+            The last URL reached. Empty when the chain could not be followed
+            at all (e.g. the input itself was a blocked internal address).
+        redirect_chain:
+          type: array
+          description: Every hop that was followed, in order.
+          items:
+            $ref: "#/components/schemas/Hop"
+        findings:
+          type: array
+          description: All triggered checks, sorted most severe first.
+          items:
+            $ref: "#/components/schemas/Finding"
+        verdict:
+          $ref: "#/components/schemas/Verdict"
+
+    Hop:
+      type: object
+      description: One step in the redirect chain.
+      required: [url, status, https]
+      properties:
+        url:
+          type: string
+          description: The URL requested at this hop.
+        status:
+          type: integer
+          description: HTTP status code returned by this hop.
+          example: 301
+        https:
+          type: boolean
+          description: Whether this hop used an encrypted (https) connection.
+
+    Finding:
+      type: object
+      description: One observation about the inspected link.
+      required: [severity, code, message]
+      properties:
+        severity:
+          type: string
+          enum: [info, warn, danger]
+          description: >
+            info — harmless observation; warn — deserves a second look;
+            danger — strong phishing signal.
+        code:
+          type: string
+          description: |
+            Stable machine-readable code. Current codes:
+
+            | Code | Severity | Meaning |
+            |---|---|---|
+            | `BLOCKED_INTERNAL` | danger | Link leads to a private/internal address; not followed |
+            | `REDIRECT_LOOP` | danger | Chain redirects in a circle |
+            | `TOO_MANY_REDIRECTS` | danger | More than 10 hops |
+            | `USERINFO` | danger | `user@host` decoy before the real hostname |
+            | `DECEPTIVE_SUBDOMAIN` | danger | Foreign registrable domain planted in the subdomain (`paypal.com.evil.xyz`) |
+            | `MIXED_SCRIPT` | danger | Hostname label mixes alphabets (Cyrillic а in "аpple") |
+            | `RAW_IP` | warn | Raw IP address instead of a hostname |
+            | `INSECURE_HTTP` | warn | Unencrypted http somewhere in the chain |
+            | `SHORTENER` | warn | Known URL-shortener domain |
+            | `SUSPICIOUS_TLD` | warn | Abuse-heavy top-level domain |
+            | `BRAND_IN_SUBDOMAIN` | warn | Brand keyword in a subdomain of an unrelated domain |
+            | `PUNYCODE` | warn | Internationalized (xn--) domain; decoded form shown |
+            | `PUNYCODE_INVALID` | warn | Punycode that cannot be decoded |
+            | `LOOKALIKE` | warn/info | Character substitution (0/o, 1/l, I/l, rn/m) in the registered domain |
+            | `UNUSUAL_PORT` | info | Port other than 80/443 |
+            | `SUBDOMAIN_DEPTH` | info | More than 3 subdomain levels |
+
+            New codes may be added; clients should treat unknown codes as
+            informational text.
+          example: SHORTENER
+        message:
+          type: string
+          description: Human-readable explanation, written for non-technical readers.
+
+    Verdict:
+      type: string
+      enum: [ok, caution, suspicious]
+      description: >
+        Aggregate of all findings: any danger finding → `suspicious`,
+        else any warn finding → `caution`, else `ok`.
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          description: Human-readable error message.

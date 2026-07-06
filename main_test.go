@@ -14,6 +14,34 @@ func newTestHandler() http.HandlerFunc {
 	return handleInspect(inspect.NewInspector(inspect.NewFollower(inspect.NewGuard())))
 }
 
+func TestDocRoutes(t *testing.T) {
+	mux := newMux(inspect.NewInspector(inspect.NewFollower(inspect.NewGuard())))
+	tests := []struct {
+		path        string
+		contentType string
+		mustContain string
+	}{
+		{"/doc", "text/html; charset=utf-8", "/openapi.yaml"},
+		{"/openapi.yaml", "application/yaml", "LinkCheck API"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.path, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tt.path, nil)
+			rec := httptest.NewRecorder()
+			mux.ServeHTTP(rec, req)
+			if rec.Code != http.StatusOK {
+				t.Fatalf("GET %s status = %d, want 200", tt.path, rec.Code)
+			}
+			if got := rec.Header().Get("Content-Type"); got != tt.contentType {
+				t.Errorf("Content-Type = %q, want %q", got, tt.contentType)
+			}
+			if !strings.Contains(rec.Body.String(), tt.mustContain) {
+				t.Errorf("GET %s body does not contain %q", tt.path, tt.mustContain)
+			}
+		})
+	}
+}
+
 func postInspect(t *testing.T, body string) *httptest.ResponseRecorder {
 	t.Helper()
 	req := httptest.NewRequest(http.MethodPost, "/api/inspect", strings.NewReader(body))
