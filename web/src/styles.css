@@ -1,0 +1,485 @@
+/* Link-Inspector — "forensic case file" theme.
+   Paper-light surface, ink-navy text, IBM Plex Mono for anything that is
+   evidence (URLs, status codes, finding codes), Fraunces for headings,
+   verdicts rendered as inspection stamps. */
+
+:root {
+  --paper: #f7f3ea;
+  --paper-deep: #efe9db;
+  --ink: #1d2433;
+  --ink-soft: #5c6373;
+  --rule: #d9d2c0;
+  --ok: #16704a;
+  --ok-wash: #e3efe5;
+  --warn: #92600a;
+  --warn-wash: #f6ecd7;
+  --danger: #a8271e;
+  --danger-wash: #f7e4e0;
+  --info: #44506b;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+  --sans: "IBM Plex Sans", system-ui, sans-serif;
+  --display: "Fraunces", georgia, serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 1rem;
+  line-height: 1.55;
+  background:
+    radial-gradient(60rem 30rem at 85% -5%, #fdfbf6 0%, transparent 60%),
+    repeating-linear-gradient(0deg, transparent 0 2px, rgba(29, 36, 51, 0.012) 2px 4px),
+    var(--paper);
+  min-height: 100vh;
+}
+
+.page {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 3.5rem 1.25rem 2rem;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+/* ---- masthead ---- */
+
+.masthead h1 {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: clamp(2.4rem, 6vw, 3.4rem);
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.masthead-dash {
+  color: var(--danger);
+}
+
+.tagline {
+  margin: 0.35rem 0 0;
+  color: var(--ink-soft);
+  font-size: 1.05rem;
+}
+
+/* ---- form ---- */
+
+.inspect-form {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 2rem;
+}
+
+.inspect-form input {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--mono);
+  font-size: 0.95rem;
+  padding: 0.8rem 1rem;
+  color: var(--ink);
+  background: #fffdf8;
+  border: 1.5px solid var(--rule);
+  border-radius: 4px;
+  transition: border-color 120ms ease;
+}
+
+.inspect-form input:focus {
+  outline: none;
+  border-color: var(--ink);
+}
+
+.inspect-form button {
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 0 1.4rem;
+  color: var(--paper);
+  background: var(--ink);
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.inspect-form button:hover:not(:disabled) {
+  background: #303b54;
+}
+
+.inspect-form button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.examples {
+  margin: 0.8rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.example-chip {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--info);
+  background: var(--paper-deep);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 0.2rem 0.7rem;
+  cursor: pointer;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.example-chip:hover {
+  border-color: var(--ink-soft);
+}
+
+/* ---- loading ---- */
+
+.scanning {
+  margin-top: 3rem;
+  text-align: center;
+  color: var(--ink-soft);
+}
+
+.scanning-bar {
+  height: 3px;
+  max-width: 16rem;
+  margin: 0 auto 1rem;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, var(--ink) 50%, transparent);
+  background-size: 50% 100%;
+  background-repeat: no-repeat;
+  animation: scan 1.1s ease-in-out infinite alternate;
+}
+
+@keyframes scan {
+  from {
+    background-position: -60% 0;
+  }
+  to {
+    background-position: 160% 0;
+  }
+}
+
+/* ---- report ---- */
+
+.report {
+  margin-top: 2.5rem;
+  animation: reveal 300ms ease both;
+}
+
+.report > * + * {
+  margin-top: 1.75rem;
+}
+
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.report h2 {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 1.15rem;
+  margin: 0 0 0.75rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--rule);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+/* ---- verdict stamp ---- */
+
+.verdict {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.1rem 1.25rem;
+  border-radius: 6px;
+}
+
+.verdict p {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.verdict-stamp {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 1.35rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  padding: 0.25rem 0.9rem;
+  border: 3px solid currentColor;
+  border-radius: 6px;
+  transform: rotate(-2deg);
+}
+
+.verdict-ok {
+  background: var(--ok-wash);
+  color: var(--ok);
+}
+
+.verdict-caution {
+  background: var(--warn-wash);
+  color: var(--warn);
+}
+
+.verdict-suspicious {
+  background: var(--danger-wash);
+  color: var(--danger);
+}
+
+.verdict-suspicious .verdict-stamp {
+  animation: stamp 260ms cubic-bezier(0.2, 1.6, 0.5, 1) both;
+}
+
+@keyframes stamp {
+  from {
+    opacity: 0;
+    transform: rotate(-2deg) scale(1.6);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(-2deg) scale(1);
+  }
+}
+
+/* ---- redirect chain ---- */
+
+.chain-count {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.chain ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  position: relative;
+}
+
+/* the trail line connecting hops */
+.chain ol::before {
+  content: "";
+  position: absolute;
+  left: 1.6rem;
+  top: 0.75rem;
+  bottom: 0.75rem;
+  width: 1px;
+  background: var(--rule);
+}
+
+.hop {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+  padding: 0.45rem 0;
+  animation: reveal 260ms ease both;
+}
+
+.hop-status {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  font-weight: 500;
+  min-width: 3.2rem;
+  text-align: center;
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+  position: relative; /* sits on top of the trail line */
+}
+
+.status-2xx {
+  background: var(--ok-wash);
+  color: var(--ok);
+}
+
+.status-3xx {
+  background: var(--warn-wash);
+  color: var(--warn);
+}
+
+.status-err {
+  background: var(--danger-wash);
+  color: var(--danger);
+}
+
+.hop-lock-off {
+  color: var(--danger);
+}
+
+.hop-url,
+.chain-final strong.hop-url {
+  font-family: var(--mono);
+  font-size: 0.88rem;
+  word-break: break-all;
+  font-weight: 400;
+}
+
+.chain-final {
+  margin: 0.75rem 0 0;
+  padding-top: 0.6rem;
+  border-top: 1px dashed var(--rule);
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+}
+
+.chain-final strong.hop-url {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.chain-empty,
+.findings-none {
+  color: var(--ink-soft);
+  font-style: italic;
+  margin: 0;
+}
+
+/* ---- findings ---- */
+
+.finding-group {
+  margin-top: 1rem;
+  padding-left: 1rem;
+  border-left: 3px solid;
+}
+
+.finding-group-danger {
+  border-color: var(--danger);
+}
+
+.finding-group-warn {
+  border-color: var(--warn);
+}
+
+.finding-group-info {
+  border-color: var(--rule);
+}
+
+.finding-group h3 {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 0.4rem;
+}
+
+.finding-group-danger h3 {
+  color: var(--danger);
+}
+
+.finding-group-warn h3 {
+  color: var(--warn);
+}
+
+.finding-group-info h3 {
+  color: var(--ink-soft);
+}
+
+.finding-group ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.finding {
+  padding: 0.35rem 0;
+}
+
+.finding-code {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+}
+
+.finding p {
+  margin: 0.1rem 0 0;
+}
+
+/* ---- error & footer ---- */
+
+.error-card {
+  margin-top: 2.5rem;
+  padding: 1.1rem 1.25rem;
+  background: var(--paper-deep);
+  border: 1.5px solid var(--rule);
+  border-radius: 6px;
+}
+
+.error-card h2 {
+  font-family: var(--display);
+  font-size: 1.1rem;
+  margin: 0 0 0.3rem;
+}
+
+.error-card p {
+  margin: 0;
+  color: var(--ink-soft);
+}
+
+.colophon {
+  margin-top: 4rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--rule);
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+}
+
+.colophon p {
+  margin: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .report,
+  .hop,
+  .verdict-stamp,
+  .scanning-bar {
+    animation: none;
+  }
+}
+
+@media (max-width: 30rem) {
+  .inspect-form {
+    flex-direction: column;
+  }
+
+  .inspect-form button {
+    padding: 0.7rem;
+  }
+
+  .verdict {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.6rem;
+  }
+}
