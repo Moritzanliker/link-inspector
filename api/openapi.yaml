@@ -2,6 +2,9 @@ openapi: 3.0.3
 info:
   title: LinkCheck API
   version: 1.0.0
+  license:
+    name: MIT
+    url: https://opensource.org/license/mit
   description: |
     LinkCheck reveals where a URL really leads: it follows the redirect
     chain server-side (behind a strict SSRF guard), runs a set of

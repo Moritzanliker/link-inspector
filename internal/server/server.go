@@ -1,10 +1,9 @@
-// Command link-inspector serves the inspection API (and, from M3 on, the
-// built frontend from web/dist).
-package main
+// Package server wires the LinkCheck HTTP surface: the inspection API, the
+// embedded API documentation, and the built frontend.
+package server
 
 import (
 	"context"
-	_ "embed"
 	"encoding/json"
 	"net/http"
 	"os"
@@ -14,24 +13,21 @@ import (
 	"github.com/eluv-io/errors-go"
 	elog "github.com/eluv-io/log-go"
 
+	"github.com/moritzanliker/link-inspector/api"
 	"github.com/moritzanliker/link-inspector/inspect"
 )
 
-var log = elog.Get("/link-inspector")
+var log = elog.Get("/link-inspector/server")
 
 // inspectTimeout caps a whole inspection: 10 hops x 5s per hop, plus slack.
 const inspectTimeout = 60 * time.Second
 
-// openapiSpec is compiled into the binary so /doc works wherever it runs.
-//
-//go:embed openapi.yaml
-var openapiSpec []byte
-
-// scalarJS is the vendored Scalar API-reference viewer (version pinned in
-// assets/scalar.version), embedded so /doc needs no CDN or internet access.
-//
-//go:embed assets/scalar.standalone.min.js
-var scalarJS []byte
+// Rate limit per client IP: generous for a human clicking around, tight
+// enough that the service is useless as a bulk URL scanner.
+const (
+	rateLimit  = 20
+	rateWindow = time.Minute
+)
 
 // docHTML renders the OpenAPI spec with Scalar's API reference viewer.
 const docHTML = `<!doctype html>
@@ -51,20 +47,16 @@ const docHTML = `<!doctype html>
 </html>
 `
 
-// Rate limit per client IP: generous for a human clicking around, tight
-// enough that the service is useless as a bulk URL scanner.
-const (
-	rateLimit  = 20
-	rateWindow = time.Minute
-)
-
-func newMux(ins *inspect.Inspector) *http.ServeMux {
+// New returns the complete LinkCheck handler. frontendDir is the directory
+// holding the built frontend (web/dist), resolved relative to the working
+// directory.
+func New(ins *inspect.Inspector, frontendDir string) *http.ServeMux {
 	limiter := newRateLimiter(rateLimit, rateWindow)
 	mux := http.NewServeMux()
 	mux.Handle("POST /api/inspect", limiter.middleware(handleInspect(ins)))
 	mux.HandleFunc("GET /openapi.yaml", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/yaml")
-		_, _ = w.Write(openapiSpec)
+		_, _ = w.Write(api.OpenAPISpec)
 	})
 	mux.HandleFunc("GET /doc", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -74,27 +66,10 @@ func newMux(ins *inspect.Inspector) *http.ServeMux {
 		w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
 		// The bundle only changes when we re-vendor it; let browsers cache.
 		w.Header().Set("Cache-Control", "public, max-age=86400")
-		_, _ = w.Write(scalarJS)
+		_, _ = w.Write(api.ScalarJS)
 	})
-	mux.Handle("GET /", frontendHandler("web/dist"))
+	mux.Handle("GET /", frontendHandler(frontendDir))
 	return mux
-}
-
-func main() {
-	ins := inspect.NewInspector(inspect.NewFollower(inspect.NewGuard()))
-	mux := newMux(ins)
-
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-	srv := &http.Server{
-		Addr:              ":" + port,
-		Handler:           mux,
-		ReadHeaderTimeout: 10 * time.Second,
-	}
-	log.Info("listening", "port", port)
-	log.Fatal("server stopped", srv.ListenAndServe())
 }
 
 type inspectRequest struct {
@@ -161,7 +136,7 @@ func frontendHandler(dir string) http.Handler {
 	if _, err := os.Stat(filepath.Join(dir, "index.html")); err != nil {
 		log.Warn("frontend not built, serving placeholder", "dir", dir)
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			http.Error(w, "Link-Inspector API. Frontend not built — run `npm run build` in web/.", http.StatusNotFound)
+			http.Error(w, "LinkCheck API. Frontend not built — run `npm run build` in web/.", http.StatusNotFound)
 		})
 	}
 	files := http.FileServer(http.Dir(dir))

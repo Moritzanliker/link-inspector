@@ -6,14 +6,14 @@ RUN npm ci
 COPY web/ ./
 RUN npm run build
 
-# Stage 2: build the Go binary (openapi.yaml and the Scalar bundle are
-# embedded via go:embed, so they must be in the build context)
+# Stage 2: build the Go binary (the OpenAPI spec and Scalar bundle in api/
+# are embedded via go:embed, so they must be in the build context)
 FROM golang:1.26-alpine AS build
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /linkcheck .
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /linkcheck ./cmd/linkcheck
 
 # Stage 3: minimal runtime. distroless/static has no shell and no libc —
 # exactly enough to run a static binary as a non-root user.

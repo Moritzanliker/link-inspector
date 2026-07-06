@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"encoding/json"
@@ -15,7 +15,7 @@ func newTestHandler() http.HandlerFunc {
 }
 
 func TestDocRoutes(t *testing.T) {
-	mux := newMux(inspect.NewInspector(inspect.NewFollower(inspect.NewGuard())))
+	mux := New(inspect.NewInspector(inspect.NewFollower(inspect.NewGuard())), "web/dist")
 	tests := []struct {
 		path        string
 		contentType string
